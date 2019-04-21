@@ -1,0 +1,31 @@
+General information
+System to generate keywords for urls.
+
+System consists from next services:
+ Main App,
+ Keyword Service - API to generate and collect keywords from site title
+ Payment Service - service for payment
+
+Project uses next technologies:
+
+Python 3.7
+Django - web framework
+AIOHTTP - asynchronous HTTP Client/Server
+Celery - asynchronous task queue/job queue
+RabbitMQ - message broker
+Docker - container platform
+
+To start system run:
+docker-compose up -d --build
+
+To run tests for main app:
+docker-compose run web python src/manage.py test keywords
+
+To run tests for payment service:
+docker-compose exec payment-service python src/manage.py test payments
+
+Main App docs:
+  http://localhost:8000/api/swagger, http://localhost:8000/api/redoc
+
+Payment Service docs:
+ http://localhost:8081/api/swagger, http://localhost:8081/api/redoc

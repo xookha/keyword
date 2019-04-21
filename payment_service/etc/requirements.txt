@@ -1,0 +1,6 @@
+celery==4.2.2
+Django>=2.0,<3.0
+djangorestframework==3.9.2
+drf-yasg==1.14.0
+psycopg2-binary==2.7.7
+requests==2.21.0

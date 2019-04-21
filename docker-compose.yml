@@ -1,0 +1,97 @@
+version: '3'
+
+services:
+
+  web:
+    build:
+      context: ./main
+      dockerfile: etc/docker/Dockerfile
+    restart: unless-stopped
+    command: /bin/bash -c "python3 src/manage.py migrate && python3 src/manage.py runserver 0.0.0.0:8000"
+    environment:
+      - DEBUG=True
+    env_file:
+      - ./main/etc/docker/postgres.env
+      - ./main/etc/docker/web.env
+    volumes:
+      - ./main:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - kw-service
+      - payment-service
+
+  db:
+    image: mdillon/postgis:11-alpine
+    restart: unless-stopped
+    env_file:
+      - ./main/etc/docker/postgres.env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./.docker_data/postgresql:/var/lib/postgresql/data/pgdata
+
+  kw-service:
+    build:
+      context: keyword_service
+      dockerfile: etc/docker/Dockerfile
+    command: /bin/bash -c "DEBUG=DEBUG  adev runserver --livereload --debug-toolbar src/app.py"
+    env_file:
+      - ./keyword_service/etc/docker/kw.env
+    volumes:
+      - ./keyword_service:/code
+    ports:
+      - "8080:8080"
+
+  payment-service:
+    build:
+      context: payment_service
+      dockerfile: etc/docker/Dockerfile
+    restart: unless-stopped
+    command: /bin/bash -c "python3 src/manage.py migrate && python3 src/manage.py runserver 0.0.0.0:8081"
+    environment:
+      - DEBUG=True
+    env_file:
+      - ./payment_service/etc/docker/postgres.env
+      - ./payment_service/etc/docker/web.env
+    volumes:
+      - ./payment_service:/code
+    ports:
+      - "8081:8081"
+    depends_on:
+      - payment-db
+
+  payment-db:
+    image: mdillon/postgis:10-alpine
+    restart: unless-stopped
+    env_file:
+      - ./payment_service/etc/docker/postgres.env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./.docker_data/payment/postgresql:/var/lib/postgresql/data/pgdata
+
+  rabbit:
+    hostname: rabbit
+    image: rabbitmq:3.7
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+  worker:
+    build:
+      context: ./main
+      dockerfile: etc/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./main/etc/docker/postgres.env
+      - ./main/etc/docker/web.env
+    environment:
+      - DEBUG=True
+    volumes:
+      - ./main:/code
+    command: /bin/bash -c "cd src && celery -A core worker -l info"
+    depends_on:
+      - rabbit
+      - db
